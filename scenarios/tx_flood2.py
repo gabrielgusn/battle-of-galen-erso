@@ -5,8 +5,6 @@ import time
 
 from commander import Commander
 
-import decimal
-
 from test_framework.messages import (
     MSG_TX,
     CInv,
@@ -20,7 +18,7 @@ from test_framework.messages import (
     CTransaction,
 )
 from test_framework.p2p import MAGIC_BYTES, P2PInterface
-from test_framework.script import CScript, OP_RETURN
+from test_framework.script import CScript, OP_CAT
 from test_framework.address import script_to_p2sh, address_to_scriptpubkey
 
 
@@ -61,54 +59,37 @@ class SpendingCoins(Commander):
         )()
         attacker.wait_until(lambda: attacker.is_connected, check_connected=False)
 
-        utxos = node.listunspent()
-        txid = int(utxos[0]["txid"], 16)
-        vout = utxos[0]["vout"]
+        while True:
+#        for i in range(1):
+            utxos = node.listunspent()
 
-        # self.log.info(f"utxos {utxos}")
+#            for i, u in enumerate(utxos):
+#                a = u["amount"]
+#                id = int(u["txid"], 16)
+#                self.log.info(f"i {i} {id} a {a} {int(a * COIN)}")
 
-        tx_arr = []
-        i=0
+            index = 2
+            txid = int(utxos[index]["txid"], 16)
+            vout = utxos[index]["vout"]
+            amount = utxos[index]["amount"]
+            t = int(amount * COIN)
+            self.log.info(f"id {txid} amount {amount} {t}")
 
-        for i, utxo in enumerate(utxos):
-            print("starting with utxo", i)
+#        self.log.info(f"utxos {utxos}")
+
             sec_tx = CTransaction()
             sec_tx.vin.append(CTxIn(COutPoint(txid, vout)))
-
-            max_outs = utxo["amount"] / decimal.Decimal(0.00000500)
-            # print(utxo["amount"])
-            # print("max",int(max_outs))
-
-            print(i," out of", tx_arr.__len__())
-            for i in range(0,int(max_outs)):
-                # print("appending utxo",i)
-                sec_tx.vout.append(
-                    CTxOut(
-                        500,  # Smallest dust value (in satoshis)
-                        CScript([OP_RETURN])  # OP_RETURN output (no spending required)
-                    )
-                )
-        # sec_tx.vout.append(
-        #     CTxOut(int(0.00009 * COIN), address_to_scriptpubkey(node.getnewaddress()))
-        # )
-
-            signed_tx = node.signrawtransactionwithwallet(sec_tx.serialize().hex())
-            tx_arr.append(signed_tx)
-
-        print("len", tx_arr.__len__())
-
-        print("SIZE",sec_tx.get_vsize())
-        print("SIZE",sec_tx.get_weight())      
-        # print(signed_tx)  
+            sec_tx.vout.append(
+                CTxOut(int(t - 100), address_to_scriptpubkey(node.getnewaddress()))
+            )
 
         # raw_tx = node.create_raw_transaction(sec_tx.serialize())
+            signed_tx = node.signrawtransactionwithwallet(sec_tx.serialize().hex())
 
-        
+            self.log.info(f"signed_tx {signed_tx}")
 
-        # self.log.info(f"signed_tx {signed_tx}")
-
-        # tx = tx_from_hex(signed_tx["hex"])
-        # attacker.send_and_ping(msg_tx(tx))
+            tx = tx_from_hex(signed_tx["hex"])
+            attacker.send_and_ping(msg_tx(tx))
 
 
 def main():
